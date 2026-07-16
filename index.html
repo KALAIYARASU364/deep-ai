@@ -1,0 +1,1558 @@
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import {
+  Shield, LayoutDashboard, Radar, Brain, Users, Activity, Video, AlertTriangle,
+  ShieldAlert, Atom, FileText, Settings, Search, Terminal, Bell, ChevronDown,
+  ChevronRight, ChevronLeft, Menu, X, Wifi, Lock, Unlock, CheckCircle2, XCircle,
+  MapPin, Smartphone, Monitor, Download, Usb, Key, LogIn, Database, Server,
+  TrendingUp, TrendingDown, Bot, Mic, Send, Sparkles, Zap, Globe, Fingerprint,
+  AlertOctagon, Clock, ExternalLink, Filter, MoreVertical, Eye, ArrowUpRight,
+  ArrowDownRight, ShieldCheck, ShieldX, Cpu, HardDrive, Layers, BarChart3,
+  RefreshCw, Plus, Check, ToggleLeft, ToggleRight, User, Building2
+} from "lucide-react";
+import {
+  AreaChart, Area, LineChart, Line, RadarChart, Radar as RRadar, PolarGrid,
+  PolarAngleAxis, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid,
+} from "recharts";
+
+/* ============================== THEME ============================== */
+const T = {
+  bg: "#050816",
+  card: "#0B1220",
+  card2: "#0E1626",
+  border: "rgba(255,255,255,0.08)",
+  borderStrong: "rgba(255,255,255,0.16)",
+  primary: "#00E5FF",
+  purple: "#7C3AED",
+  red: "#EF4444",
+  warning: "#F59E0B",
+  success: "#10B981",
+  textPrimary: "#E7EDF7",
+  textSecondary: "#8B96AB",
+  textMuted: "#5A657A",
+};
+
+const FONT_DISPLAY = "'Space Grotesk', 'Inter', sans-serif";
+const FONT_MONO = "'IBM Plex Mono', 'SF Mono', monospace";
+const FONT_BODY = "'Inter', sans-serif";
+
+/* ============================== UTILITIES ============================== */
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const rand = (a, b) => a + Math.random() * (b - a);
+const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+
+function useTicker(ms, fn, deps = []) {
+  useEffect(() => {
+    const id = setInterval(fn, ms);
+    return () => clearInterval(id);
+    // eslint-disable-next-line
+  }, deps);
+}
+
+function useClock() {
+  const [now, setNow] = useState(new Date());
+  useTicker(1000, () => setNow(new Date()));
+  return now;
+}
+
+/* ============================== GLOBAL STYLE ============================== */
+function GlobalStyle() {
+  return (
+    <style>{`
+      @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+      .sx-root { font-family: ${FONT_BODY}; color: ${T.textPrimary}; }
+      .sx-root * { box-sizing: border-box; }
+      .sx-root ::-webkit-scrollbar { width: 8px; height: 8px; }
+      .sx-root ::-webkit-scrollbar-track { background: transparent; }
+      .sx-root ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 8px; }
+      .sx-root ::-webkit-scrollbar-thumb:hover { background: rgba(0,229,255,0.3); }
+
+      @keyframes sx-grid-move { from { background-position: 0 0; } to { background-position: 48px 48px; } }
+      @keyframes sx-pulse-dot { 0%,100% { opacity:1; transform:scale(1);} 50% { opacity:.55; transform:scale(1.4);} }
+      @keyframes sx-pulse-ring { 0% { transform:scale(0.4); opacity:.9;} 100% { transform:scale(2.6); opacity:0;} }
+      @keyframes sx-spin-slow { from { transform: rotate(0deg);} to { transform: rotate(360deg);} }
+      @keyframes sx-scan { 0% { transform: translateY(-100%);} 100% { transform: translateY(100%);} }
+      @keyframes sx-float { 0%,100% { transform: translateY(0);} 50% { transform: translateY(-6px);} }
+      @keyframes sx-glow { 0%,100% { opacity:.5;} 50% { opacity:1;} }
+      @keyframes sx-fade-in { from { opacity:0; transform: translateY(6px);} to { opacity:1; transform: translateY(0);} }
+      @keyframes sx-slide-in { from { opacity:0; transform: translateX(24px);} to { opacity:1; transform: translateX(0);} }
+      @keyframes sx-marquee { from { transform: translateX(0);} to { transform: translateX(-50%);} }
+      @keyframes sx-arc { 0% { offset-distance: 0%; opacity: 0; } 8% { opacity: 1; } 92% { opacity: 1; } 100% { offset-distance: 100%; opacity: 0; } }
+      @keyframes sx-blink { 0%,100% { opacity:1;} 50% { opacity:.2;} }
+      @keyframes sx-typing { 0%,80%,100% { transform: scale(0.7); opacity:.4;} 40% { transform: scale(1); opacity:1;} }
+
+      .sx-fade-in { animation: sx-fade-in .4s ease both; }
+      .sx-scrollY { overflow-y: auto; overflow-x: hidden; }
+
+      .sx-glass {
+        background: linear-gradient(180deg, rgba(14,22,38,0.9), rgba(11,18,32,0.85));
+        border: 1px solid ${T.border};
+        border-radius: 14px;
+        backdrop-filter: blur(10px);
+      }
+      .sx-glass:hover { border-color: ${T.borderStrong}; }
+
+      .sx-btn {
+        font-family: ${FONT_BODY};
+        border: 1px solid ${T.border};
+        background: rgba(255,255,255,0.03);
+        color: ${T.textPrimary};
+        cursor: pointer;
+        transition: all .15s ease;
+      }
+      .sx-btn:hover { border-color: rgba(0,229,255,0.4); background: rgba(0,229,255,0.06); }
+
+      .sx-nav-item {
+        display:flex; align-items:center; gap:12px;
+        padding: 10px 14px; border-radius: 10px; cursor:pointer;
+        color: ${T.textSecondary}; font-size: 13.5px; font-weight: 500;
+        border: 1px solid transparent;
+        transition: all .15s ease;
+        position: relative;
+      }
+      .sx-nav-item:hover { color: ${T.textPrimary}; background: rgba(255,255,255,0.04); }
+      .sx-nav-item.active {
+        color: ${T.primary};
+        background: linear-gradient(90deg, rgba(0,229,255,0.12), rgba(124,58,237,0.06));
+        border: 1px solid rgba(0,229,255,0.25);
+      }
+      .sx-nav-item.active::before {
+        content:''; position:absolute; left:-13px; top:50%; transform:translateY(-50%);
+        width:3px; height:60%; background: ${T.primary}; border-radius: 4px;
+        box-shadow: 0 0 8px ${T.primary};
+      }
+
+      .sx-input {
+        font-family: ${FONT_BODY};
+        background: rgba(255,255,255,0.04);
+        border: 1px solid ${T.border};
+        color: ${T.textPrimary};
+        outline: none;
+        transition: all .15s ease;
+      }
+      .sx-input:focus { border-color: rgba(0,229,255,0.5); box-shadow: 0 0 0 3px rgba(0,229,255,0.08); }
+      .sx-input::placeholder { color: ${T.textMuted}; }
+
+      .sx-badge {
+        display:inline-flex; align-items:center; gap:5px;
+        font-family: ${FONT_MONO}; font-size:10.5px; font-weight:600;
+        letter-spacing: .04em; padding: 3px 8px; border-radius: 6px;
+        text-transform: uppercase;
+      }
+
+      .sx-table-row { transition: background .15s ease; }
+      .sx-table-row:hover { background: rgba(255,255,255,0.03); }
+
+      .sx-checkbox-track { transition: background .2s ease; }
+      .sx-progress-fill { transition: width .6s ease; }
+
+      .sx-tooltip-card {
+        background: #0B1220; border: 1px solid ${T.border}; border-radius: 10px;
+        padding: 8px 12px; font-family: ${FONT_MONO}; font-size: 11px;
+      }
+    `}</style>
+  );
+}
+
+/* ============================== BACKGROUND ============================== */
+function CyberBackground() {
+  return (
+    <div style={{ position: "absolute", inset: 0, overflow: "hidden", zIndex: 0, pointerEvents: "none" }}>
+      <div style={{ position: "absolute", inset: 0, background: T.bg }} />
+      <div
+        style={{
+          position: "absolute", inset: -100,
+          backgroundImage:
+            "linear-gradient(rgba(0,229,255,0.045) 1px, transparent 1px), linear-gradient(90deg, rgba(0,229,255,0.045) 1px, transparent 1px)",
+          backgroundSize: "48px 48px",
+          animation: "sx-grid-move 6s linear infinite",
+          maskImage: "radial-gradient(ellipse 80% 60% at 50% 20%, black 40%, transparent 90%)",
+        }}
+      />
+      <div style={{ position: "absolute", top: "-10%", left: "8%", width: 520, height: 520, borderRadius: "50%", background: "radial-gradient(circle, rgba(124,58,237,0.16), transparent 70%)", animation: "sx-glow 6s ease-in-out infinite" }} />
+      <div style={{ position: "absolute", top: "10%", right: "5%", width: 620, height: 620, borderRadius: "50%", background: "radial-gradient(circle, rgba(0,229,255,0.1), transparent 70%)", animation: "sx-glow 7s ease-in-out infinite 1s" }} />
+      <div style={{ position: "absolute", bottom: "-15%", left: "40%", width: 500, height: 500, borderRadius: "50%", background: "radial-gradient(circle, rgba(16,185,129,0.06), transparent 70%)" }} />
+    </div>
+  );
+}
+
+/* ============================== SMALL PRIMITIVES ============================== */
+function Pill({ color, children, dot }) {
+  return (
+    <span className="sx-badge" style={{ color, background: `${color}18`, border: `1px solid ${color}40` }}>
+      {dot && <span style={{ width: 5, height: 5, borderRadius: "50%", background: color, boxShadow: `0 0 6px ${color}`, display: "inline-block" }} />}
+      {children}
+    </span>
+  );
+}
+
+function ProgressBar({ value, color = T.primary, height = 5 }) {
+  return (
+    <div style={{ width: "100%", height, borderRadius: 4, background: "rgba(255,255,255,0.06)", overflow: "hidden" }}>
+      <div className="sx-progress-fill" style={{ width: `${clamp(value, 0, 100)}%`, height: "100%", background: `linear-gradient(90deg, ${color}99, ${color})`, boxShadow: `0 0 8px ${color}80` }} />
+    </div>
+  );
+}
+
+function IconBadge({ icon: Icon, color }) {
+  return (
+    <div style={{ width: 38, height: 38, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", background: `${color}14`, border: `1px solid ${color}35` }}>
+      <Icon size={18} color={color} strokeWidth={2} />
+    </div>
+  );
+}
+
+function SectionHeader({ title, subtitle, right }) {
+  return (
+    <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", marginBottom: 18, flexWrap: "wrap", gap: 12 }}>
+      <div>
+        <h1 style={{ fontFamily: FONT_DISPLAY, fontWeight: 600, fontSize: 22, margin: 0, letterSpacing: "-0.01em" }}>{title}</h1>
+        {subtitle && <p style={{ color: T.textSecondary, fontSize: 13, margin: "4px 0 0" }}>{subtitle}</p>}
+      </div>
+      {right}
+    </div>
+  );
+}
+
+function AnimatedNumber({ value, decimals = 0 }) {
+  const [display, setDisplay] = useState(value);
+  const prev = useRef(value);
+  useEffect(() => {
+    const start = prev.current;
+    const end = value;
+    const duration = 500;
+    const t0 = performance.now();
+    let raf;
+    const step = (t) => {
+      const p = clamp((t - t0) / duration, 0, 1);
+      setDisplay(start + (end - start) * p);
+      if (p < 1) raf = requestAnimationFrame(step);
+      else prev.current = end;
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [value]);
+  return <>{display.toFixed(decimals)}</>;
+}
+
+/* ============================== MOCK DATA ============================== */
+const NAV = [
+  { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { id: "threat", label: "Threat monitor", icon: Radar },
+  { id: "ai-risk", label: "AI risk engine", icon: Brain },
+  { id: "users", label: "Privileged users", icon: Users },
+  { id: "behavior", label: "Behavior analytics", icon: Activity },
+  { id: "sessions", label: "Session monitoring", icon: Video },
+  { id: "incidents", label: "Incident center", icon: AlertTriangle },
+  { id: "intel", label: "Threat intelligence", icon: ShieldAlert },
+  { id: "quantum", label: "Quantum security", icon: Atom },
+  { id: "reports", label: "Reports", icon: FileText },
+  { id: "settings", label: "Settings", icon: Settings },
+];
+
+const CITIES = [
+  { name: "New York", lat: 40.7, lon: -74.0 },
+  { name: "London", lat: 51.5, lon: -0.1 },
+  { name: "Frankfurt", lat: 50.1, lon: 8.7 },
+  { name: "Dubai", lat: 25.2, lon: 55.3 },
+  { name: "Mumbai", lat: 19.1, lon: 72.9 },
+  { name: "Singapore", lat: 1.3, lon: 103.8 },
+  { name: "Tokyo", lat: 35.7, lon: 139.7 },
+  { name: "Sydney", lat: -33.9, lon: 151.2 },
+  { name: "Sao Paulo", lat: -23.6, lon: -46.6 },
+  { name: "Johannesburg", lat: -26.2, lon: 28.0 },
+  { name: "Moscow", lat: 55.8, lon: 37.6 },
+  { name: "Toronto", lat: 43.7, lon: -79.4 },
+];
+const MAP_W = 1000, MAP_H = 460;
+function project(lat, lon) {
+  return { x: ((lon + 180) / 360) * MAP_W, y: ((90 - lat) / 180) * MAP_H };
+}
+
+const USERS = [
+  { id: 1, name: "Ananya Iyer", dept: "Core Banking", role: "DB Administrator", activity: "Executing bulk query", risk: 88, trust: 34, behavior: 41, mfa: true, device: "Corp laptop", location: "Mumbai, IN", status: "active" },
+  { id: 2, name: "Marcus Webb", dept: "Treasury", role: "Ops Lead", activity: "Approving wire transfer", risk: 42, trust: 78, behavior: 81, mfa: true, device: "Corp laptop", location: "London, UK", status: "active" },
+  { id: 3, name: "Priya Nair", dept: "IT Infrastructure", role: "Sysadmin", activity: "SSH session — prod-db-04", risk: 91, trust: 22, behavior: 29, mfa: false, device: "Unmanaged PC", location: "Frankfurt, DE", status: "flagged" },
+  { id: 4, name: "David Chen", dept: "Risk & Compliance", role: "Compliance Officer", activity: "Reviewing audit log", risk: 12, trust: 95, behavior: 96, mfa: true, device: "Corp laptop", location: "Singapore", status: "active" },
+  { id: 5, name: "Sofia Ramirez", dept: "Core Banking", role: "Senior Engineer", activity: "Deploying hotfix", risk: 35, trust: 82, behavior: 79, mfa: true, device: "Corp laptop", location: "Sao Paulo, BR", status: "active" },
+  { id: 6, name: "Ibrahim Al-Farsi", dept: "Network Ops", role: "Network Engineer", activity: "VPN session — night shift", risk: 67, trust: 51, behavior: 48, mfa: true, device: "Corp laptop", location: "Dubai, UAE", status: "active" },
+  { id: 7, name: "Karan Mehta", dept: "Core Banking", role: "DB Administrator", activity: "USB device connected", risk: 95, trust: 18, behavior: 24, mfa: false, device: "Unmanaged PC", location: "Mumbai, IN", status: "flagged" },
+  { id: 8, name: "Emily Novak", dept: "HR Systems", role: "HR Analyst", activity: "Payroll export", risk: 58, trust: 63, behavior: 60, mfa: true, device: "Corp laptop", location: "Toronto, CA", status: "active" },
+];
+
+const INCIDENTS = [
+  {
+    id: "INC-2291", severity: "Critical", title: "Anomalous privilege escalation on prod-db-04",
+    mitre: "T1078.003", status: "Investigating", time: "6 min ago",
+    ai: "User elevated from read-only to sysadmin outside approved change window, then queried customer PII tables at 40x baseline volume.",
+    evidence: ["Privilege change logged 02:14 IST — no linked change ticket", "312 SELECT statements against pii_customers in 90s", "Session originated from unrecognized device fingerprint"],
+    actions: ["Suspend session token", "Force re-authentication with step-up MFA", "Escalate to Tier 2 SOC analyst"],
+  },
+  {
+    id: "INC-2290", severity: "High", title: "Impossible travel — VPN login from two regions",
+    mitre: "T1078", status: "Open", time: "22 min ago",
+    ai: "Same credential set authenticated from Frankfurt and Dubai 11 minutes apart, a distance requiring an average speed of over 2,100 km/h.",
+    evidence: ["Login A: Frankfurt, DE — 09:41 IST", "Login B: Dubai, UAE — 09:52 IST", "Device fingerprint mismatch between sessions"],
+    actions: ["Terminate both active sessions", "Reset credentials", "Notify user via out-of-band channel"],
+  },
+  {
+    id: "INC-2287", severity: "High", title: "Bulk data export via USB on regulated workstation",
+    mitre: "T1052.001", status: "Investigating", time: "1 hr ago",
+    ai: "2.3 GB of transaction records copied to an unregistered USB device on a workstation without DLP endpoint coverage.",
+    evidence: ["USB vendor ID not in asset registry", "File volume 41x user's 30-day average", "Export occurred outside business hours"],
+    actions: ["Disable USB ports via MDM", "Quarantine workstation", "Open compliance case"],
+  },
+  {
+    id: "INC-2283", severity: "Medium", title: "Repeated failed MFA challenges on treasury console",
+    mitre: "T1110", status: "Resolved", time: "3 hr ago",
+    ai: "Nine consecutive MFA failures followed by a successful attempt suggest a possible push-fatigue or credential-stuffing pattern.",
+    evidence: ["9 push notifications denied by user within 4 minutes", "10th approved after a 6 min gap", "Source IP resolves to a known VPN exit node"],
+    actions: ["Require passwordless re-enrollment", "Flag device for continuous verification"],
+  },
+  {
+    id: "INC-2279", severity: "Low", title: "Off-hours API access to reporting service",
+    mitre: "T1213", status: "Resolved", time: "5 hr ago",
+    ai: "A scheduled reporting integration authenticated outside its usual cron window; consistent with a manual re-run, not malicious activity.",
+    evidence: ["API key belongs to reporting-svc integration", "Access pattern matches historical manual re-runs"],
+    actions: ["Acknowledge — no action required"],
+  },
+];
+
+const CVES = [
+  { id: "CVE-2026-31170", product: "Core banking middleware", severity: "Critical", score: 9.8, summary: "Authentication bypass in the SWIFT message gateway allows unauthenticated transaction replay." },
+  { id: "CVE-2026-28940", product: "Privileged access gateway", severity: "High", score: 8.4, summary: "Session token reuse after logout permits lateral movement between banking segments." },
+  { id: "CVE-2026-27812", product: "Mobile banking SDK", severity: "High", score: 7.9, summary: "Insecure local storage of biometric fallback PINs on rooted devices." },
+  { id: "CVE-2026-25510", product: "Log aggregation pipeline", severity: "Medium", score: 6.1, summary: "Log injection allows crafted entries to suppress downstream SIEM alerting rules." },
+  { id: "CVE-2026-24003", product: "Branch kiosk firmware", severity: "Medium", score: 5.6, summary: "Unsigned firmware update channel enables local persistence on ATM-adjacent kiosks." },
+  { id: "CVE-2026-21188", product: "Vendor SFTP connector", severity: "Low", score: 3.2, summary: "Verbose error messages leak internal hostnames to unauthenticated callers." },
+];
+
+const THREAT_ACTORS = [
+  { name: "Silent Ledger", type: "Financially motivated", activity: "Targeting SWIFT relay credentials via spear-phishing", confidence: 82 },
+  { name: "Obsidian Vault", type: "Insider-enablement broker", activity: "Recruiting privileged staff on closed forums", confidence: 64 },
+  { name: "Glass Serpent", type: "Nation-state aligned", activity: "Probing core-banking APIs for zero-day exposure", confidence: 71 },
+];
+
+function makeTrend(base, n = 24, vol = 4) {
+  let v = base;
+  return Array.from({ length: n }, (_, i) => {
+    v = clamp(v + rand(-vol, vol), 5, 98);
+    return { t: `${i}:00`, v: Math.round(v) };
+  });
+}
+
+const ACTIVITY_TEMPLATES = [
+  { icon: LogIn, label: (u) => `${u} logged in via SSO`, risk: "low" },
+  { icon: Database, label: (u) => `${u} ran a database query`, risk: "low" },
+  { icon: ShieldAlert, label: (u) => `${u} escalated privileges`, risk: "high" },
+  { icon: Server, label: (u) => `${u} called internal API`, risk: "low" },
+  { icon: Download, label: (u) => `${u} downloaded a file bundle`, risk: "med" },
+  { icon: Usb, label: (u) => `${u} connected a USB device`, risk: "high" },
+  { icon: Wifi, label: (u) => `${u} opened a VPN session`, risk: "med" },
+  { icon: Key, label: (u) => `${u} rotated an API key`, risk: "low" },
+];
+const RISK_COLOR = { low: T.success, med: T.warning, high: T.red };
+
+function makeActivity() {
+  const tpl = pick(ACTIVITY_TEMPLATES);
+  const user = pick(USERS).name;
+  return {
+    id: Math.random().toString(36).slice(2),
+    icon: tpl.icon,
+    text: tpl.label(user),
+    risk: tpl.risk,
+    time: new Date(),
+  };
+}
+
+/* ============================== TOPBAR ============================== */
+function Topbar({ onToggleSidebar, onOpenPalette, onOpenNotifications, unread, threatLevel }) {
+  const now = useClock();
+  const levelColor = { Guarded: T.success, Elevated: T.warning, Severe: T.red }[threatLevel];
+  return (
+    <div style={{ height: 62, display: "flex", alignItems: "center", gap: 14, padding: "0 20px", borderBottom: `1px solid ${T.border}`, background: "rgba(5,8,22,0.7)", backdropFilter: "blur(10px)", position: "sticky", top: 0, zIndex: 20 }}>
+      <button className="sx-btn" onClick={onToggleSidebar} style={{ width: 36, height: 36, borderRadius: 9, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }} aria-label="Toggle sidebar">
+        <Menu size={16} />
+      </button>
+
+      <div style={{ position: "relative", width: 320, maxWidth: "36vw" }}>
+        <Search size={14} color={T.textMuted} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)" }} />
+        <input className="sx-input" placeholder="Search users, incidents, assets…" style={{ width: "100%", padding: "9px 12px 9px 34px", borderRadius: 9, fontSize: 13 }} />
+      </div>
+
+      <button className="sx-btn" onClick={onOpenPalette} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", borderRadius: 9, fontSize: 12.5, color: T.textSecondary, flexShrink: 0 }}>
+        <Terminal size={14} color={T.primary} /> Ask AI
+        <span style={{ fontFamily: FONT_MONO, fontSize: 10.5, padding: "2px 6px", borderRadius: 5, background: "rgba(255,255,255,0.06)", color: T.textMuted }}>⌘K</span>
+      </button>
+
+      <div style={{ flex: 1 }} />
+
+      <div style={{ display: "flex", alignItems: "center", gap: 7, fontFamily: FONT_MONO, fontSize: 12.5, color: T.textSecondary }}>
+        <Clock size={13} />
+        {now.toLocaleTimeString("en-US", { hour12: false })}
+      </div>
+
+      <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: T.success }}>
+        <span style={{ width: 7, height: 7, borderRadius: "50%", background: T.success, boxShadow: `0 0 8px ${T.success}`, animation: "sx-pulse-dot 2s ease-in-out infinite" }} />
+        Operational
+      </div>
+
+      <Pill color={levelColor} dot>Threat level: {threatLevel}</Pill>
+
+      <button className="sx-btn" onClick={onOpenNotifications} style={{ width: 36, height: 36, borderRadius: 9, position: "relative", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }} aria-label="Notifications">
+        <Bell size={16} />
+        {unread > 0 && (
+          <span style={{ position: "absolute", top: -3, right: -3, minWidth: 16, height: 16, borderRadius: 8, background: T.red, fontSize: 9.5, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 3px", boxShadow: `0 0 6px ${T.red}` }}>
+            {unread}
+          </span>
+        )}
+      </button>
+
+      <div style={{ width: 34, height: 34, borderRadius: "50%", background: `linear-gradient(135deg, ${T.primary}, ${T.purple})`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, color: "#04121a", flexShrink: 0 }}>
+        SC
+      </div>
+    </div>
+  );
+}
+
+/* ============================== SIDEBAR ============================== */
+function Sidebar({ collapsed, active, onNavigate }) {
+  return (
+    <div style={{ width: collapsed ? 72 : 232, transition: "width .18s ease", borderRight: `1px solid ${T.border}`, background: "rgba(7,11,24,0.75)", backdropFilter: "blur(10px)", display: "flex", flexDirection: "column", flexShrink: 0, zIndex: 20 }}>
+      <div style={{ height: 62, display: "flex", alignItems: "center", gap: 10, padding: "0 18px", borderBottom: `1px solid ${T.border}` }}>
+        <div style={{ position: "relative", width: 28, height: 28, flexShrink: 0 }}>
+          <Shield size={28} color={T.primary} strokeWidth={1.7} style={{ filter: `drop-shadow(0 0 6px ${T.primary}80)` }} />
+        </div>
+        {!collapsed && (
+          <div style={{ fontFamily: FONT_DISPLAY, fontWeight: 700, fontSize: 15.5, letterSpacing: "-0.01em", whiteSpace: "nowrap" }}>
+            DeepShield <span style={{ color: T.primary }}>AI</span>
+          </div>
+        )}
+      </div>
+
+      <div className="sx-scrollY" style={{ flex: 1, padding: "14px 12px", display: "flex", flexDirection: "column", gap: 3 }}>
+        {NAV.map((item) => (
+          <div key={item.id} className={`sx-nav-item ${active === item.id ? "active" : ""}`} onClick={() => onNavigate(item.id)} title={collapsed ? item.label : undefined}>
+            <item.icon size={17} strokeWidth={2} style={{ flexShrink: 0 }} />
+            {!collapsed && <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.label}</span>}
+          </div>
+        ))}
+      </div>
+
+      {!collapsed && (
+        <div style={{ margin: 12, padding: 14, borderRadius: 12, background: "linear-gradient(135deg, rgba(124,58,237,0.12), rgba(0,229,255,0.06))", border: `1px solid ${T.border}` }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+            <Sparkles size={14} color={T.purple} />
+            <span style={{ fontSize: 12, fontWeight: 600 }}>AI Copilot online</span>
+          </div>
+          <p style={{ fontSize: 11, color: T.textSecondary, margin: 0, lineHeight: 1.5 }}>Monitoring 4,812 privileged sessions in real time.</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ============================== KPI CARD ============================== */
+function KpiCard({ icon, color, label, value, suffix, delta, decimals = 0 }) {
+  const up = delta >= 0;
+  return (
+    <div className="sx-glass" style={{ padding: 16, position: "relative", overflow: "hidden" }}>
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 14 }}>
+        <IconBadge icon={icon} color={color} />
+        <span style={{ display: "flex", alignItems: "center", gap: 3, fontSize: 11.5, fontFamily: FONT_MONO, color: up ? T.success : T.red }}>
+          {up ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
+          {Math.abs(delta).toFixed(1)}%
+        </span>
+      </div>
+      <div style={{ fontFamily: FONT_DISPLAY, fontSize: 26, fontWeight: 700, letterSpacing: "-0.02em" }}>
+        <AnimatedNumber value={value} decimals={decimals} />{suffix}
+      </div>
+      <div style={{ fontSize: 12, color: T.textSecondary, marginTop: 3 }}>{label}</div>
+    </div>
+  );
+}
+
+/* ============================== WORLD THREAT MAP ============================== */
+function WorldThreatMap({ arcs }) {
+  const lonLines = Array.from({ length: 13 }, (_, i) => (i / 12) * MAP_W);
+  const latLines = Array.from({ length: 7 }, (_, i) => (i / 6) * MAP_H);
+  return (
+    <div style={{ position: "relative", width: "100%", aspectRatio: `${MAP_W}/${MAP_H}`, borderRadius: 10, overflow: "hidden", background: "radial-gradient(ellipse at 50% 40%, rgba(0,229,255,0.05), transparent 70%)" }}>
+      <svg viewBox={`0 0 ${MAP_W} ${MAP_H}`} width="100%" height="100%" style={{ display: "block" }}>
+        <defs>
+          <radialGradient id="glowDot" r="60%">
+            <stop offset="0%" stopColor={T.primary} stopOpacity="0.9" />
+            <stop offset="100%" stopColor={T.primary} stopOpacity="0" />
+          </radialGradient>
+        </defs>
+        {lonLines.map((x, i) => <line key={`lo${i}`} x1={x} y1={0} x2={x} y2={MAP_H} stroke="rgba(0,229,255,0.06)" strokeWidth="1" />)}
+        {latLines.map((y, i) => <line key={`la${i}`} x1={0} y1={y} x2={MAP_W} y2={y} stroke="rgba(0,229,255,0.06)" strokeWidth="1" />)}
+        <ellipse cx={MAP_W / 2} cy={MAP_H / 2} rx={MAP_W / 2 - 10} ry={MAP_H / 2 - 8} fill="none" stroke="rgba(0,229,255,0.12)" strokeWidth="1" />
+
+        {CITIES.map((c) => {
+          const p = project(c.lat, c.lon);
+          return (
+            <g key={c.name}>
+              <circle cx={p.x} cy={p.y} r="9" fill="url(#glowDot)" />
+              <circle cx={p.x} cy={p.y} r="2.6" fill={T.primary} />
+            </g>
+          );
+        })}
+
+        {arcs.map((a) => {
+          const p1 = project(a.from.lat, a.from.lon);
+          const p2 = project(a.to.lat, a.to.lon);
+          const mx = (p1.x + p2.x) / 2, my = Math.min(p1.y, p2.y) - Math.abs(p1.x - p2.x) * 0.18 - 20;
+          const d = `M ${p1.x} ${p1.y} Q ${mx} ${my} ${p2.x} ${p2.y}`;
+          const color = a.sev === "critical" ? T.red : a.sev === "high" ? T.warning : T.primary;
+          return (
+            <g key={a.id}>
+              <path d={d} fill="none" stroke={color} strokeWidth="1" opacity="0.35" />
+              <circle r="3" fill={color} style={{ offsetPath: `path('${d}')`, animation: `sx-arc ${a.dur}s linear infinite`, filter: `drop-shadow(0 0 4px ${color})` }} />
+            </g>
+          );
+        })}
+      </svg>
+      <div style={{ position: "absolute", inset: 0, pointerEvents: "none", background: `linear-gradient(180deg, transparent, ${T.card2}00 60%, ${T.card2}30)` }} />
+      <div style={{ position: "absolute", bottom: 10, left: 12, display: "flex", gap: 14, fontSize: 10.5, color: T.textSecondary, fontFamily: FONT_MONO }}>
+        <span><span style={{ display: "inline-block", width: 7, height: 7, borderRadius: "50%", background: T.red, marginRight: 5 }} />Critical</span>
+        <span><span style={{ display: "inline-block", width: 7, height: 7, borderRadius: "50%", background: T.warning, marginRight: 5 }} />High</span>
+        <span><span style={{ display: "inline-block", width: 7, height: 7, borderRadius: "50%", background: T.primary, marginRight: 5 }} />Monitored</span>
+      </div>
+    </div>
+  );
+}
+
+/* ============================== RADIAL GAUGE ============================== */
+function RadialGauge({ value, size = 220, stroke = 16, color = T.primary, label, sub }) {
+  const r = (size - stroke) / 2;
+  const c = 2 * Math.PI * r;
+  const pct = clamp(value, 0, 100) / 100;
+  const arcLen = c * 0.75; // 270 deg gauge
+  const offset = arcLen * (1 - pct);
+  return (
+    <div style={{ position: "relative", width: size, height: size, display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <svg width={size} height={size} style={{ transform: "rotate(135deg)" }}>
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth={stroke} strokeDasharray={`${arcLen} ${c}`} strokeLinecap="round" />
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={stroke} strokeDasharray={`${arcLen} ${c}`} strokeDashoffset={offset} strokeLinecap="round" style={{ transition: "stroke-dashoffset 1s ease", filter: `drop-shadow(0 0 8px ${color}90)` }} />
+      </svg>
+      <div style={{ position: "absolute", textAlign: "center" }}>
+        <div style={{ fontFamily: FONT_DISPLAY, fontSize: size * 0.19, fontWeight: 700 }}><AnimatedNumber value={value} decimals={0} /></div>
+        {label && <div style={{ fontSize: 11.5, color: T.textSecondary, marginTop: 2 }}>{label}</div>}
+        {sub && <div style={{ fontSize: 10, color: T.textMuted, marginTop: 1 }}>{sub}</div>}
+      </div>
+    </div>
+  );
+}
+
+/* ============================== CHART TOOLTIP ============================== */
+function ChartTip({ active, payload, label, suffix = "" }) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="sx-tooltip-card">
+      <div style={{ color: T.textMuted }}>{label}</div>
+      <div style={{ color: T.primary, fontWeight: 600 }}>{payload[0].value}{suffix}</div>
+    </div>
+  );
+}
+
+/* ============================== DASHBOARD VIEW ============================== */
+function DashboardView({ metrics, trend, activity }) {
+  return (
+    <div className="sx-fade-in">
+      <SectionHeader
+        title="Security operations overview"
+        subtitle="Real-time posture across all monitored banking systems"
+        right={<Pill color={T.success} dot>Live feed connected</Pill>}
+      />
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: 14, marginBottom: 18 }}>
+        <KpiCard icon={ShieldAlert} color={T.primary} label="Overall threat score" value={metrics.threatScore} suffix="/100" delta={metrics.threatDelta} decimals={1} />
+        <KpiCard icon={AlertOctagon} color={T.red} label="Critical alerts" value={metrics.critical} suffix="" delta={metrics.criticalDelta} />
+        <KpiCard icon={Users} color={T.warning} label="High-risk users" value={metrics.highRisk} suffix="" delta={metrics.highRiskDelta} />
+        <KpiCard icon={Brain} color={T.purple} label="AI confidence" value={metrics.confidence} suffix="%" delta={0.4} decimals={1} />
+        <KpiCard icon={Lock} color={T.success} label="Protected assets" value={metrics.assets} suffix="" delta={0.2} />
+        <KpiCard icon={Activity} color={T.primary} label="Active sessions" value={metrics.sessions} suffix="" delta={metrics.sessionDelta} />
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr", gap: 14, marginBottom: 14 }}>
+        <div className="sx-glass" style={{ padding: 18 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <Globe size={16} color={T.primary} />
+              <span style={{ fontWeight: 600, fontSize: 14 }}>Global threat map</span>
+            </div>
+            <Pill color={T.red}>{metrics.attacksToday} attacks today</Pill>
+          </div>
+          <WorldThreatMap arcs={metrics.arcs} />
+        </div>
+
+        <div className="sx-glass" style={{ padding: 18, display: "flex", flexDirection: "column" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+            <Activity size={16} color={T.primary} />
+            <span style={{ fontWeight: 600, fontSize: 14 }}>Live activity stream</span>
+          </div>
+          <div className="sx-scrollY" style={{ flex: 1, maxHeight: 340, display: "flex", flexDirection: "column", gap: 4 }}>
+            {activity.map((a) => (
+              <div key={a.id} className="sx-fade-in" style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 6px", borderRadius: 8 }}>
+                <div style={{ width: 28, height: 28, borderRadius: 8, background: `${RISK_COLOR[a.risk]}16`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <a.icon size={13} color={RISK_COLOR[a.risk]} />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 12.5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.text}</div>
+                </div>
+                <div style={{ fontSize: 10.5, color: T.textMuted, fontFamily: FONT_MONO, flexShrink: 0 }}>{a.time.toLocaleTimeString("en-US", { hour12: false })}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="sx-glass" style={{ padding: 18 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+          <TrendingUp size={16} color={T.primary} />
+          <span style={{ fontWeight: 600, fontSize: 14 }}>24-hour risk trend</span>
+        </div>
+        <div style={{ width: "100%", height: 200 }}>
+          <ResponsiveContainer>
+            <AreaChart data={trend}>
+              <defs>
+                <linearGradient id="riskFill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={T.primary} stopOpacity={0.35} />
+                  <stop offset="100%" stopColor={T.primary} stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid stroke="rgba(255,255,255,0.05)" vertical={false} />
+              <XAxis dataKey="t" tick={{ fill: T.textMuted, fontSize: 10 }} axisLine={{ stroke: "rgba(255,255,255,0.08)" }} tickLine={false} interval={3} />
+              <YAxis tick={{ fill: T.textMuted, fontSize: 10 }} axisLine={false} tickLine={false} width={28} />
+              <Tooltip content={<ChartTip />} />
+              <Area type="monotone" dataKey="v" stroke={T.primary} strokeWidth={2} fill="url(#riskFill)" />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ============================== AI RISK ENGINE VIEW ============================== */
+function AiRiskView({ metrics, drift }) {
+  return (
+    <div className="sx-fade-in">
+      <SectionHeader title="AI risk engine" subtitle="Predictive insider-threat modeling across privileged activity" />
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 14, marginBottom: 14 }}>
+        <div className="sx-glass" style={{ padding: 24, display: "flex", flexDirection: "column", alignItems: "center" }}>
+          <RadialGauge value={100 - metrics.threatScore} color={T.success} label="Security score" sub="higher is safer" size={210} />
+        </div>
+        <div className="sx-glass" style={{ padding: 24, display: "flex", flexDirection: "column", alignItems: "center" }}>
+          <RadialGauge value={metrics.confidence} color={T.purple} label="AI confidence" sub="model certainty" size={210} />
+        </div>
+        <div className="sx-glass" style={{ padding: 24, display: "flex", flexDirection: "column", alignItems: "center" }}>
+          <RadialGauge value={metrics.threatScore} color={T.red} label="Predicted insider threat" sub="24h forward" size={210} />
+        </div>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: 14 }}>
+        <div className="sx-glass" style={{ padding: 18 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+            <Activity size={16} color={T.primary} />
+            <span style={{ fontWeight: 600, fontSize: 14 }}>Behavior drift — organization baseline</span>
+          </div>
+          <div style={{ width: "100%", height: 220 }}>
+            <ResponsiveContainer>
+              <LineChart data={drift}>
+                <CartesianGrid stroke="rgba(255,255,255,0.05)" vertical={false} />
+                <XAxis dataKey="t" tick={{ fill: T.textMuted, fontSize: 10 }} axisLine={{ stroke: "rgba(255,255,255,0.08)" }} tickLine={false} interval={3} />
+                <YAxis tick={{ fill: T.textMuted, fontSize: 10 }} axisLine={false} tickLine={false} width={28} />
+                <Tooltip content={<ChartTip suffix="%" />} />
+                <Line type="monotone" dataKey="v" stroke={T.purple} strokeWidth={2} dot={false} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        <div className="sx-glass" style={{ padding: 18 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+            <Sparkles size={16} color={T.purple} />
+            <span style={{ fontWeight: 600, fontSize: 14 }}>AI recommendation</span>
+          </div>
+          <p style={{ fontSize: 13, lineHeight: 1.6, color: T.textSecondary, marginBottom: 16 }}>
+            Behavior drift for the Core Banking department has climbed 18 points in 6 hours, concentrated in two DB administrator accounts with disabled MFA. Recommend enforcing step-up authentication and reviewing recent privilege grants before the next batch settlement window.
+          </p>
+          <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+            <Pill color={T.red}>High confidence</Pill>
+            <Pill color={T.primary}>2 accounts affected</Pill>
+          </div>
+          <div style={{ display: "flex", gap: 10 }}>
+            <button className="sx-btn" style={{ flex: 1, padding: "10px 0", borderRadius: 9, fontSize: 12.5, fontWeight: 600, borderColor: "rgba(0,229,255,0.35)", color: T.primary }}>Apply mitigation</button>
+            <button className="sx-btn" style={{ flex: 1, padding: "10px 0", borderRadius: 9, fontSize: 12.5, color: T.textSecondary }}>Dismiss</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ============================== PRIVILEGED USERS VIEW ============================== */
+function RiskBadge({ score }) {
+  const color = score >= 75 ? T.red : score >= 45 ? T.warning : T.success;
+  return <Pill color={color}>{score}</Pill>;
+}
+
+function UsersView({ onSelect }) {
+  const [sortKey, setSortKey] = useState("risk");
+  const sorted = useMemo(() => [...USERS].sort((a, b) => b[sortKey] - a[sortKey]), [sortKey]);
+  return (
+    <div className="sx-fade-in">
+      <SectionHeader
+        title="Privileged users"
+        subtitle={`${USERS.length} accounts with elevated access · ${USERS.filter(u => u.status === "flagged").length} flagged for review`}
+        right={
+          <div style={{ display: "flex", gap: 8 }}>
+            {["risk", "trust", "behavior"].map((k) => (
+              <button key={k} onClick={() => setSortKey(k)} className="sx-btn" style={{ padding: "7px 12px", borderRadius: 8, fontSize: 12, textTransform: "capitalize", color: sortKey === k ? T.primary : T.textSecondary, borderColor: sortKey === k ? "rgba(0,229,255,0.4)" : T.border }}>
+                Sort: {k}
+              </button>
+            ))}
+          </div>
+        }
+      />
+      <div className="sx-glass" style={{ overflow: "hidden" }}>
+        <div className="sx-scrollY" style={{ maxWidth: "100%", overflowX: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 980 }}>
+            <thead>
+              <tr style={{ borderBottom: `1px solid ${T.border}` }}>
+                {["User", "Department", "Current activity", "Risk", "Trust", "Behavior", "MFA", "Device", "Location", "Status", ""].map((h) => (
+                  <th key={h} style={{ textAlign: "left", padding: "12px 14px", fontSize: 11, color: T.textMuted, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".04em" }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {sorted.map((u) => (
+                <tr key={u.id} className="sx-table-row" style={{ borderBottom: `1px solid ${T.border}`, cursor: "pointer" }} onClick={() => onSelect(u)}>
+                  <td style={{ padding: "12px 14px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <div style={{ width: 32, height: 32, borderRadius: "50%", background: `linear-gradient(135deg, ${T.primary}55, ${T.purple}55)`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11.5, fontWeight: 700 }}>
+                        {u.name.split(" ").map(n => n[0]).join("")}
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 12.5, fontWeight: 600 }}>{u.name}</div>
+                        <div style={{ fontSize: 11, color: T.textMuted }}>{u.role}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td style={{ padding: "12px 14px", fontSize: 12, color: T.textSecondary }}>{u.dept}</td>
+                  <td style={{ padding: "12px 14px", fontSize: 12, color: T.textSecondary, maxWidth: 200 }}>{u.activity}</td>
+                  <td style={{ padding: "12px 14px" }}><RiskBadge score={u.risk} /></td>
+                  <td style={{ padding: "12px 14px", width: 90 }}><ProgressBar value={u.trust} color={T.success} /></td>
+                  <td style={{ padding: "12px 14px", width: 90 }}><ProgressBar value={u.behavior} color={T.primary} /></td>
+                  <td style={{ padding: "12px 14px" }}>{u.mfa ? <ShieldCheck size={16} color={T.success} /> : <ShieldX size={16} color={T.red} />}</td>
+                  <td style={{ padding: "12px 14px", fontSize: 12, color: T.textSecondary, whiteSpace: "nowrap" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>{u.device.includes("Corp") ? <Monitor size={13} /> : <Smartphone size={13} />}{u.device}</div>
+                  </td>
+                  <td style={{ padding: "12px 14px", fontSize: 12, color: T.textSecondary, whiteSpace: "nowrap" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}><MapPin size={13} />{u.location}</div>
+                  </td>
+                  <td style={{ padding: "12px 14px" }}>
+                    <Pill color={u.status === "flagged" ? T.red : T.success} dot>{u.status}</Pill>
+                  </td>
+                  <td style={{ padding: "12px 14px" }}>
+                    <Eye size={15} color={T.textMuted} />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ============================== USER PROFILE DRAWER ============================== */
+function UserProfileDrawer({ user, onClose }) {
+  if (!user) return null;
+  const radarData = [
+    { k: "Typing", v: clamp(user.behavior + rand(-10, 10), 5, 98) },
+    { k: "Access pattern", v: clamp(user.trust + rand(-10, 10), 5, 98) },
+    { k: "Time pattern", v: clamp(100 - user.risk + rand(-10, 10), 5, 98) },
+    { k: "Location", v: clamp(user.behavior + rand(-15, 15), 5, 98) },
+    { k: "Data volume", v: clamp(100 - user.risk + rand(-15, 15), 5, 98) },
+  ];
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 60, display: "flex", justifyContent: "flex-end" }}>
+      <div onClick={onClose} style={{ position: "absolute", inset: 0, background: "rgba(2,4,10,0.6)", backdropFilter: "blur(2px)" }} />
+      <div className="sx-glass" style={{ position: "relative", width: 420, maxWidth: "92vw", height: "100%", borderRadius: 0, borderLeft: `1px solid ${T.border}`, animation: "sx-slide-in .25s ease both", padding: 22, overflowY: "auto" }}>
+        <button className="sx-btn" onClick={onClose} style={{ position: "absolute", top: 18, right: 18, width: 30, height: 30, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}><X size={14} /></button>
+
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 18 }}>
+          <div style={{ width: 52, height: 52, borderRadius: "50%", background: `linear-gradient(135deg, ${T.primary}66, ${T.purple}66)`, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 16 }}>
+            {user.name.split(" ").map(n => n[0]).join("")}
+          </div>
+          <div>
+            <div style={{ fontFamily: FONT_DISPLAY, fontSize: 16, fontWeight: 600 }}>{user.name}</div>
+            <div style={{ fontSize: 12, color: T.textSecondary }}>{user.role} · {user.dept}</div>
+          </div>
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginBottom: 18 }}>
+          <div className="sx-glass" style={{ padding: 12, textAlign: "center" }}><RiskBadge score={user.risk} /><div style={{ fontSize: 10, color: T.textMuted, marginTop: 6 }}>Risk score</div></div>
+          <div className="sx-glass" style={{ padding: 12, textAlign: "center" }}><div style={{ fontWeight: 700, color: T.success }}>{user.trust}</div><div style={{ fontSize: 10, color: T.textMuted, marginTop: 4 }}>Trust score</div></div>
+          <div className="sx-glass" style={{ padding: 12, textAlign: "center" }}><div style={{ fontWeight: 700, color: T.primary }}>{user.behavior}</div><div style={{ fontSize: 10, color: T.textMuted, marginTop: 4 }}>Behavior score</div></div>
+        </div>
+
+        <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 8 }}>Behavior profile</div>
+        <div style={{ width: "100%", height: 200, marginBottom: 18 }}>
+          <ResponsiveContainer>
+            <RadarChart data={radarData} outerRadius={70}>
+              <PolarGrid stroke="rgba(255,255,255,0.1)" />
+              <PolarAngleAxis dataKey="k" tick={{ fill: T.textMuted, fontSize: 10 }} />
+              <RRadar dataKey="v" stroke={T.primary} fill={T.primary} fillOpacity={0.25} />
+            </RadarChart>
+          </ResponsiveContainer>
+        </div>
+
+        <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 10 }}>Session details</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, fontSize: 12.5 }}>
+          {[
+            ["Current activity", user.activity],
+            ["Device", user.device],
+            ["Location", user.location],
+            ["MFA enrolled", user.mfa ? "Yes" : "No"],
+            ["Status", user.status],
+          ].map(([k, v]) => (
+            <div key={k} style={{ display: "flex", justifyContent: "space-between", borderBottom: `1px solid ${T.border}`, paddingBottom: 8 }}>
+              <span style={{ color: T.textMuted }}>{k}</span>
+              <span>{v}</span>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ display: "flex", gap: 8, marginTop: 20 }}>
+          <button className="sx-btn" style={{ flex: 1, padding: "10px 0", borderRadius: 9, fontSize: 12.5, color: T.red, borderColor: "rgba(239,68,68,0.35)" }}>Suspend session</button>
+          <button className="sx-btn" style={{ flex: 1, padding: "10px 0", borderRadius: 9, fontSize: 12.5 }}>View full audit trail</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ============================== BEHAVIOR ANALYTICS VIEW ============================== */
+function BehaviorView() {
+  const heat = useMemo(() => {
+    const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+    return days.map((d) => ({ d, hours: Array.from({ length: 24 }, () => Math.round(rand(4, 96))) }));
+  }, []);
+  const heatColor = (v) => {
+    if (v > 75) return T.red;
+    if (v > 50) return T.warning;
+    if (v > 25) return "#1D9E75";
+    return "rgba(255,255,255,0.06)";
+  };
+  const timeline = [
+    { t: "02:14", label: "Sysadmin privilege drift detected on prod-db-04", sev: T.red },
+    { t: "05:40", label: "Login-pattern deviation for treasury console", sev: T.warning },
+    { t: "09:52", label: "Impossible travel flagged, Frankfurt → Dubai", sev: T.red },
+    { t: "13:10", label: "Data-volume anomaly cleared after review", sev: T.success },
+    { t: "17:32", label: "New device fingerprint enrolled with step-up MFA", sev: T.primary },
+  ];
+  return (
+    <div className="sx-fade-in">
+      <SectionHeader title="Behavior analytics" subtitle="Deviation heatmaps and evolving risk across the privileged population" />
+      <div className="sx-glass" style={{ padding: 18, marginBottom: 14 }}>
+        <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 14 }}>Anomalous activity heatmap — last 7 days</div>
+        <div style={{ overflowX: "auto" }}>
+          <div style={{ minWidth: 720 }}>
+            {heat.map((row) => (
+              <div key={row.d} style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                <div style={{ width: 32, fontSize: 10.5, color: T.textMuted, fontFamily: FONT_MONO }}>{row.d}</div>
+                {row.hours.map((v, i) => (
+                  <div key={i} title={`${row.d} ${i}:00 — ${v}`} style={{ width: 24, height: 16, borderRadius: 3, background: heatColor(v), boxShadow: v > 75 ? `0 0 6px ${T.red}80` : "none" }} />
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="sx-glass" style={{ padding: 18 }}>
+        <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 16 }}>Behavior deviation timeline</div>
+        <div style={{ position: "relative", paddingLeft: 20 }}>
+          <div style={{ position: "absolute", left: 5, top: 4, bottom: 4, width: 1, background: T.border }} />
+          {timeline.map((e, i) => (
+            <div key={i} style={{ position: "relative", paddingBottom: 22 }}>
+              <div style={{ position: "absolute", left: -20, top: 3, width: 10, height: 10, borderRadius: "50%", background: e.sev, boxShadow: `0 0 6px ${e.sev}` }} />
+              <div style={{ fontSize: 11, color: T.textMuted, fontFamily: FONT_MONO, marginBottom: 2 }}>{e.t}</div>
+              <div style={{ fontSize: 13 }}>{e.label}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ============================== SESSION MONITORING VIEW ============================== */
+function SessionsView({ activity }) {
+  const kinds = [
+    { icon: LogIn, label: "Logins", count: 214, color: T.primary },
+    { icon: Database, label: "DB queries", count: 1892, color: T.success },
+    { icon: ShieldAlert, label: "Privilege escalations", count: 6, color: T.red },
+    { icon: Server, label: "API calls", count: 5320, color: T.primary },
+    { icon: Download, label: "File downloads", count: 88, color: T.warning },
+    { icon: Usb, label: "USB events", count: 3, color: T.red },
+    { icon: Wifi, label: "VPN sessions", count: 47, color: T.primary },
+    { icon: Key, label: "Key rotations", count: 12, color: T.success },
+  ];
+  return (
+    <div className="sx-fade-in">
+      <SectionHeader title="Session monitoring" subtitle="Realtime banking activity across every monitored channel" />
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12, marginBottom: 14 }}>
+        {kinds.map((k) => (
+          <div key={k.label} className="sx-glass" style={{ padding: 14 }}>
+            <IconBadge icon={k.icon} color={k.color} />
+            <div style={{ fontFamily: FONT_DISPLAY, fontSize: 20, fontWeight: 700, marginTop: 10 }}>{k.count.toLocaleString()}</div>
+            <div style={{ fontSize: 11.5, color: T.textSecondary }}>{k.label} today</div>
+          </div>
+        ))}
+      </div>
+      <div className="sx-glass" style={{ padding: 18 }}>
+        <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 12 }}>Live session stream</div>
+        <div className="sx-scrollY" style={{ maxHeight: 380 }}>
+          {activity.map((a) => (
+            <div key={a.id} className="sx-fade-in sx-table-row" style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 8px", borderRadius: 8, borderBottom: `1px solid ${T.border}` }}>
+              <div style={{ width: 30, height: 30, borderRadius: 8, background: `${RISK_COLOR[a.risk]}16`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <a.icon size={14} color={RISK_COLOR[a.risk]} />
+              </div>
+              <div style={{ flex: 1, fontSize: 12.5 }}>{a.text}</div>
+              <Pill color={RISK_COLOR[a.risk]}>{a.risk}</Pill>
+              <div style={{ fontSize: 11, color: T.textMuted, fontFamily: FONT_MONO, width: 76, textAlign: "right" }}>{a.time.toLocaleTimeString("en-US", { hour12: false })}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ============================== INCIDENT CENTER VIEW ============================== */
+const SEV_COLOR = { Critical: T.red, High: T.warning, Medium: "#3B8BD4", Low: T.success };
+function IncidentCard({ inc, open, onToggle }) {
+  const color = SEV_COLOR[inc.severity];
+  return (
+    <div className="sx-glass" style={{ padding: 0, borderLeft: `3px solid ${color}`, borderRadius: 12, overflow: "hidden" }}>
+      <div style={{ padding: 16, cursor: "pointer", display: "flex", gap: 14, alignItems: "flex-start" }} onClick={onToggle}>
+        <IconBadge icon={AlertTriangle} color={color} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 4 }}>
+            <span style={{ fontFamily: FONT_MONO, fontSize: 11, color: T.textMuted }}>{inc.id}</span>
+            <Pill color={color}>{inc.severity}</Pill>
+            <Pill color="#8B96AB">{inc.mitre}</Pill>
+            <Pill color={inc.status === "Resolved" ? T.success : inc.status === "Investigating" ? T.warning : T.red}>{inc.status}</Pill>
+          </div>
+          <div style={{ fontSize: 14, fontWeight: 600 }}>{inc.title}</div>
+          <div style={{ fontSize: 11.5, color: T.textMuted, marginTop: 3 }}>{inc.time}</div>
+        </div>
+        <ChevronDown size={16} color={T.textMuted} style={{ transform: open ? "rotate(180deg)" : "none", transition: "transform .2s", flexShrink: 0, marginTop: 6 }} />
+      </div>
+      {open && (
+        <div className="sx-fade-in" style={{ padding: "0 16px 18px 66px", display: "flex", flexDirection: "column", gap: 14 }}>
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 600, color: T.purple, marginBottom: 6 }}><Sparkles size={13} />AI explanation</div>
+            <p style={{ fontSize: 12.5, color: T.textSecondary, lineHeight: 1.6, margin: 0 }}>{inc.ai}</p>
+          </div>
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 6, color: T.textSecondary }}>Evidence</div>
+            <ul style={{ margin: 0, paddingLeft: 18, display: "flex", flexDirection: "column", gap: 4 }}>
+              {inc.evidence.map((e, i) => <li key={i} style={{ fontSize: 12, color: T.textSecondary, fontFamily: FONT_MONO }}>{e}</li>)}
+            </ul>
+          </div>
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 6, color: T.textSecondary }}>Recommended actions</div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              {inc.actions.map((a, i) => <button key={i} className="sx-btn" style={{ padding: "7px 12px", borderRadius: 8, fontSize: 12 }}>{a}</button>)}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function IncidentsView() {
+  const [openId, setOpenId] = useState(INCIDENTS[0].id);
+  const [filter, setFilter] = useState("All");
+  const filtered = filter === "All" ? INCIDENTS : INCIDENTS.filter((i) => i.severity === filter);
+  return (
+    <div className="sx-fade-in">
+      <SectionHeader
+        title="Incident center"
+        subtitle={`${INCIDENTS.filter(i => i.status !== "Resolved").length} active incidents requiring attention`}
+        right={
+          <div style={{ display: "flex", gap: 6 }}>
+            {["All", "Critical", "High", "Medium", "Low"].map((s) => (
+              <button key={s} onClick={() => setFilter(s)} className="sx-btn" style={{ padding: "6px 11px", borderRadius: 7, fontSize: 11.5, color: filter === s ? T.primary : T.textSecondary, borderColor: filter === s ? "rgba(0,229,255,0.4)" : T.border }}>{s}</button>
+            ))}
+          </div>
+        }
+      />
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        {filtered.map((inc) => (
+          <IncidentCard key={inc.id} inc={inc} open={openId === inc.id} onToggle={() => setOpenId(openId === inc.id ? null : inc.id)} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ============================== THREAT INTELLIGENCE VIEW ============================== */
+function IntelView() {
+  return (
+    <div className="sx-fade-in">
+      <SectionHeader title="Threat intelligence" subtitle="Vulnerability feeds and actor tracking relevant to banking infrastructure" />
+      <div style={{ display: "grid", gridTemplateColumns: "1.3fr 1fr", gap: 14 }}>
+        <div className="sx-glass" style={{ padding: 18 }}>
+          <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 14 }}>Latest CVEs affecting your stack</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {CVES.map((c) => (
+              <div key={c.id} style={{ display: "flex", gap: 12, padding: 12, borderRadius: 10, background: "rgba(255,255,255,0.02)", border: `1px solid ${T.border}` }}>
+                <div style={{ width: 50, textAlign: "center", flexShrink: 0 }}>
+                  <div style={{ fontFamily: FONT_DISPLAY, fontWeight: 700, fontSize: 17, color: SEV_COLOR[c.severity] || T.textPrimary }}>{c.score}</div>
+                  <div style={{ fontSize: 9, color: T.textMuted }}>CVSS</div>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 3, flexWrap: "wrap" }}>
+                    <span style={{ fontFamily: FONT_MONO, fontSize: 11.5, color: T.primary }}>{c.id}</span>
+                    <Pill color={SEV_COLOR[c.severity] || T.textSecondary}>{c.severity}</Pill>
+                  </div>
+                  <div style={{ fontSize: 12, color: T.textSecondary, marginBottom: 2 }}>{c.product}</div>
+                  <div style={{ fontSize: 12, lineHeight: 1.5 }}>{c.summary}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="sx-glass" style={{ padding: 18 }}>
+          <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 14 }}>Tracked threat actors</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {THREAT_ACTORS.map((a) => (
+              <div key={a.name} style={{ padding: 12, borderRadius: 10, border: `1px solid ${T.border}` }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                  <span style={{ fontWeight: 600, fontSize: 13 }}>{a.name}</span>
+                  <span style={{ fontSize: 11, fontFamily: FONT_MONO, color: T.textMuted }}>{a.confidence}% conf.</span>
+                </div>
+                <div style={{ fontSize: 11, color: T.purple, marginBottom: 6 }}>{a.type}</div>
+                <div style={{ fontSize: 12, color: T.textSecondary, lineHeight: 1.5, marginBottom: 8 }}>{a.activity}</div>
+                <ProgressBar value={a.confidence} color={T.purple} />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ============================== QUANTUM SECURITY VIEW ============================== */
+function QuantumView() {
+  const systems = [
+    { name: "SWIFT gateway", pct: 78 },
+    { name: "Core ledger", pct: 54 },
+    { name: "Mobile banking API", pct: 91 },
+    { name: "Card tokenization", pct: 63 },
+    { name: "Archive & backups", pct: 32 },
+  ];
+  return (
+    <div className="sx-fade-in">
+      <SectionHeader title="Quantum security" subtitle="Post-quantum readiness and cryptographic agility across critical systems" />
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1.4fr", gap: 14 }}>
+        <div className="sx-glass" style={{ padding: 24, display: "flex", flexDirection: "column", alignItems: "center" }}>
+          <RadialGauge value={64} color={T.purple} label="Migration readiness" sub="org-wide average" size={210} />
+          <div style={{ display: "flex", gap: 16, marginTop: 18 }}>
+            <div style={{ textAlign: "center" }}>
+              <div style={{ fontWeight: 700, color: T.success }}>3</div>
+              <div style={{ fontSize: 10.5, color: T.textMuted }}>Quantum-safe</div>
+            </div>
+            <div style={{ textAlign: "center" }}>
+              <div style={{ fontWeight: 700, color: T.warning }}>2</div>
+              <div style={{ fontSize: 10.5, color: T.textMuted }}>In migration</div>
+            </div>
+            <div style={{ textAlign: "center" }}>
+              <div style={{ fontWeight: 700, color: T.red }}>1</div>
+              <div style={{ fontSize: 10.5, color: T.textMuted }}>At risk</div>
+            </div>
+          </div>
+        </div>
+        <div className="sx-glass" style={{ padding: 18 }}>
+          <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 16 }}>Crypto-agility by system</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            {systems.map((s) => (
+              <div key={s.name}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, marginBottom: 6 }}>
+                  <span>{s.name}</span>
+                  <span style={{ fontFamily: FONT_MONO, color: s.pct > 70 ? T.success : s.pct > 45 ? T.warning : T.red }}>{s.pct}%</span>
+                </div>
+                <ProgressBar value={s.pct} color={s.pct > 70 ? T.success : s.pct > 45 ? T.warning : T.red} height={7} />
+              </div>
+            ))}
+          </div>
+          <div style={{ marginTop: 18, padding: 12, borderRadius: 10, background: "rgba(124,58,237,0.08)", border: `1px solid rgba(124,58,237,0.25)`, display: "flex", gap: 10, alignItems: "flex-start" }}>
+            <Atom size={16} color={T.purple} style={{ flexShrink: 0, marginTop: 1 }} />
+            <p style={{ fontSize: 12, color: T.textSecondary, margin: 0, lineHeight: 1.6 }}>Archive and backup encryption remains on RSA-2048. Prioritize migration to a lattice-based scheme before long-term key exposure windows widen.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ============================== REPORTS VIEW ============================== */
+function ReportsView() {
+  const [status, setStatus] = useState({});
+  const templates = [
+    { id: "exec", name: "Executive summary", desc: "Board-ready overview of posture and incidents", icon: FileText },
+    { id: "soc", name: "SOC shift report", desc: "Detailed activity log for the current shift", icon: Activity },
+    { id: "compliance", name: "Compliance report", desc: "Control coverage mapped to regulatory framework", icon: ShieldCheck },
+    { id: "audit", name: "Audit log export", desc: "Raw, timestamped event export for auditors", icon: Database },
+    { id: "ai", name: "AI insights digest", desc: "Model-generated summary of emerging risk patterns", icon: Sparkles },
+  ];
+
+  const generate = (t) => {
+    setStatus((s) => ({ ...s, [t.id]: "generating" }));
+    setTimeout(() => {
+      const content = `DEEPSHIELD AI — ${t.name.toUpperCase()}\nGenerated ${new Date().toLocaleString()}\n\nOverall threat score: moderate-elevated\nCritical alerts: ${INCIDENTS.filter(i => i.severity === "Critical").length}\nHigh-risk privileged users: ${USERS.filter(u => u.risk >= 75).length}\nOpen incidents: ${INCIDENTS.filter(i => i.status !== "Resolved").length}\n\nThis is an auto-generated ${t.name.toLowerCase()} produced by the DeepShield AI copilot for the FinSpark Hackathon prototype.`;
+      const blob = new Blob([content], { type: "text/plain" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `sentinelx-${t.id}-report.txt`;
+      a.click();
+      URL.revokeObjectURL(url);
+      setStatus((s) => ({ ...s, [t.id]: "ready" }));
+    }, 1200);
+  };
+
+  return (
+    <div className="sx-fade-in">
+      <SectionHeader title="Reports" subtitle="Generate board, audit, and compliance-ready exports on demand" />
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 14 }}>
+        {templates.map((t) => (
+          <div key={t.id} className="sx-glass" style={{ padding: 18 }}>
+            <IconBadge icon={t.icon} color={T.primary} />
+            <div style={{ fontWeight: 600, fontSize: 14, marginTop: 12 }}>{t.name}</div>
+            <div style={{ fontSize: 12, color: T.textSecondary, margin: "4px 0 16px", lineHeight: 1.5 }}>{t.desc}</div>
+            <button
+              className="sx-btn"
+              onClick={() => generate(t)}
+              disabled={status[t.id] === "generating"}
+              style={{ width: "100%", padding: "9px 0", borderRadius: 9, fontSize: 12.5, display: "flex", alignItems: "center", justifyContent: "center", gap: 7, color: status[t.id] === "ready" ? T.success : T.primary, borderColor: status[t.id] === "ready" ? "rgba(16,185,129,0.35)" : "rgba(0,229,255,0.3)" }}
+            >
+              {status[t.id] === "generating" ? (<><RefreshCw size={13} className="sx-spin" style={{ animation: "sx-spin-slow 1s linear infinite" }} />Generating…</>) : status[t.id] === "ready" ? (<><Check size={13} />Downloaded — generate again</>) : (<><Download size={13} />Generate report</>)}
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ============================== SETTINGS VIEW ============================== */
+function Toggle({ on, onChange }) {
+  return (
+    <div onClick={() => onChange(!on)} className="sx-checkbox-track" style={{ width: 38, height: 22, borderRadius: 12, background: on ? T.primary : "rgba(255,255,255,0.12)", position: "relative", cursor: "pointer", flexShrink: 0 }}>
+      <div style={{ position: "absolute", top: 2, left: on ? 18 : 2, width: 18, height: 18, borderRadius: "50%", background: "#fff", transition: "left .18s ease" }} />
+    </div>
+  );
+}
+
+function SettingsView() {
+  const [mfa, setMfa] = useState(true);
+  const [timeout_, setTimeout_] = useState(15);
+  const [roles, setRoles] = useState({ "View incidents": { admin: true, analyst: true, viewer: true }, "Manage users": { admin: true, analyst: false, viewer: false }, "Generate reports": { admin: true, analyst: true, viewer: false }, "Modify settings": { admin: true, analyst: false, viewer: false } });
+  const [keys, setKeys] = useState([{ name: "SIEM ingest", value: "sx_live_••••••••8f2a" }, { name: "AI copilot", value: "sx_live_••••••••c410" }]);
+  const [integrations, setIntegrations] = useState([{ name: "Splunk", on: true }, { name: "ServiceNow", on: true }, { name: "Slack alerts", on: false }, { name: "Okta", on: true }]);
+
+  const toggleRole = (perm, role) => setRoles((r) => ({ ...r, [perm]: { ...r[perm], [role]: !r[perm][role] } }));
+  const regenKey = (i) => setKeys((k) => k.map((key, idx) => idx === i ? { ...key, value: `sx_live_••••••••${Math.random().toString(16).slice(2, 6)}` } : key));
+
+  return (
+    <div className="sx-fade-in">
+      <SectionHeader title="Settings" subtitle="Access control, authentication, integrations, and platform preferences" />
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        <div className="sx-glass" style={{ padding: 18 }}>
+          <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 14 }}>Role-based access control</div>
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 500 }}>
+              <thead>
+                <tr style={{ borderBottom: `1px solid ${T.border}` }}>
+                  <th style={{ textAlign: "left", padding: "8px 10px", fontSize: 11, color: T.textMuted }}>Permission</th>
+                  {["admin", "analyst", "viewer"].map((r) => <th key={r} style={{ textAlign: "center", padding: "8px 10px", fontSize: 11, color: T.textMuted, textTransform: "capitalize" }}>{r}</th>)}
+                </tr>
+              </thead>
+              <tbody>
+                {Object.entries(roles).map(([perm, rs]) => (
+                  <tr key={perm} style={{ borderBottom: `1px solid ${T.border}` }}>
+                    <td style={{ padding: "10px", fontSize: 12.5 }}>{perm}</td>
+                    {["admin", "analyst", "viewer"].map((role) => (
+                      <td key={role} style={{ textAlign: "center", padding: "10px" }}>
+                        <div style={{ display: "inline-flex" }} onClick={() => toggleRole(perm, role)}>
+                          {rs[role] ? <CheckCircle2 size={16} color={T.success} style={{ cursor: "pointer" }} /> : <XCircle size={16} color={T.textMuted} style={{ cursor: "pointer" }} />}
+                        </div>
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+          <div className="sx-glass" style={{ padding: 18 }}>
+            <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 14 }}>Authentication</div>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+              <div>
+                <div style={{ fontSize: 13 }}>Require MFA for privileged roles</div>
+                <div style={{ fontSize: 11, color: T.textMuted }}>Applies to admin and analyst accounts</div>
+              </div>
+              <Toggle on={mfa} onChange={setMfa} />
+            </div>
+            <div>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, marginBottom: 8 }}>
+                <span>Session timeout</span>
+                <span style={{ fontFamily: FONT_MONO, color: T.primary }}>{timeout_} min</span>
+              </div>
+              <input type="range" min="5" max="60" value={timeout_} onChange={(e) => setTimeout_(Number(e.target.value))} style={{ width: "100%", accentColor: T.primary }} />
+            </div>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 16 }}>
+              <div style={{ fontSize: 13 }}>Light mode</div>
+              <Pill color={T.textMuted}>Coming soon</Pill>
+            </div>
+          </div>
+
+          <div className="sx-glass" style={{ padding: 18 }}>
+            <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 14 }}>API keys</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 12 }}>
+              {keys.map((k, i) => (
+                <div key={k.name} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 10px", borderRadius: 8, border: `1px solid ${T.border}` }}>
+                  <div>
+                    <div style={{ fontSize: 12.5 }}>{k.name}</div>
+                    <div style={{ fontFamily: FONT_MONO, fontSize: 11, color: T.textMuted }}>{k.value}</div>
+                  </div>
+                  <button className="sx-btn" onClick={() => regenKey(i)} style={{ padding: "5px 9px", borderRadius: 7, fontSize: 11, display: "flex", alignItems: "center", gap: 5 }}><RefreshCw size={11} />Regenerate</button>
+                </div>
+              ))}
+            </div>
+            <button className="sx-btn" style={{ width: "100%", padding: "9px 0", borderRadius: 9, fontSize: 12.5, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, color: T.primary }}><Plus size={13} />New API key</button>
+          </div>
+        </div>
+
+        <div className="sx-glass" style={{ padding: 18 }}>
+          <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 14 }}>Integrations</div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 10 }}>
+            {integrations.map((it, i) => (
+              <div key={it.name} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 12px", borderRadius: 9, border: `1px solid ${T.border}` }}>
+                <span style={{ fontSize: 13 }}>{it.name}</span>
+                <Toggle on={it.on} onChange={(v) => setIntegrations((arr) => arr.map((x, idx) => idx === i ? { ...x, on: v } : x))} />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ============================== COMMAND PALETTE ============================== */
+function CommandPalette({ open, onClose, onNavigate }) {
+  const [q, setQ] = useState("");
+  const inputRef = useRef(null);
+  useEffect(() => { if (open) setTimeout(() => inputRef.current?.focus(), 30); }, [open]);
+  if (!open) return null;
+  const results = NAV.filter((n) => n.label.toLowerCase().includes(q.toLowerCase()));
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 80, display: "flex", justifyContent: "center", alignItems: "flex-start", paddingTop: "12vh" }}>
+      <div onClick={onClose} style={{ position: "absolute", inset: 0, background: "rgba(2,4,10,0.65)", backdropFilter: "blur(3px)" }} />
+      <div className="sx-glass sx-fade-in" style={{ position: "relative", width: 520, maxWidth: "90vw", padding: 8, borderRadius: 14 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderBottom: `1px solid ${T.border}` }}>
+          <Terminal size={16} color={T.primary} />
+          <input ref={inputRef} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Ask AI or jump to a section…" className="sx-input" style={{ flex: 1, border: "none", background: "none", fontSize: 14, padding: 0 }} />
+          <span style={{ fontFamily: FONT_MONO, fontSize: 10.5, color: T.textMuted }}>ESC</span>
+        </div>
+        <div style={{ padding: 6, maxHeight: 320, overflowY: "auto" }}>
+          {results.map((r) => (
+            <div key={r.id} onClick={() => { onNavigate(r.id); onClose(); }} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 9, cursor: "pointer" }} className="sx-nav-item">
+              <r.icon size={15} /> {r.label}
+            </div>
+          ))}
+          {q && (
+            <div onClick={onClose} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 9, cursor: "pointer", color: T.purple }} className="sx-nav-item">
+              <Sparkles size={15} /> Ask AI copilot: "{q}"
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ============================== NOTIFICATION DRAWER ============================== */
+function NotificationDrawer({ open, onClose, alerts, onRead }) {
+  if (!open) return null;
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 70, display: "flex", justifyContent: "flex-end" }}>
+      <div onClick={onClose} style={{ position: "absolute", inset: 0, background: "rgba(2,4,10,0.55)" }} />
+      <div className="sx-glass" style={{ position: "relative", width: 380, maxWidth: "90vw", height: "100%", borderRadius: 0, borderLeft: `1px solid ${T.border}`, animation: "sx-slide-in .22s ease both", padding: 18, display: "flex", flexDirection: "column" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+          <span style={{ fontWeight: 600, fontSize: 15 }}>Alert center</span>
+          <button className="sx-btn" onClick={onClose} style={{ width: 28, height: 28, borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center" }}><X size={13} /></button>
+        </div>
+        <div className="sx-scrollY" style={{ flex: 1, display: "flex", flexDirection: "column", gap: 8 }}>
+          {alerts.length === 0 && <div style={{ color: T.textMuted, fontSize: 13, textAlign: "center", marginTop: 40 }}>No alerts yet.</div>}
+          {alerts.map((a) => (
+            <div key={a.id} onClick={() => onRead(a.id)} style={{ padding: 12, borderRadius: 10, border: `1px solid ${T.border}`, background: a.read ? "transparent" : "rgba(0,229,255,0.04)", cursor: "pointer" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                <Pill color={SEV_COLOR[a.severity] || T.primary} dot={!a.read}>{a.severity}</Pill>
+                <span style={{ fontSize: 10.5, color: T.textMuted, fontFamily: FONT_MONO }}>{a.time}</span>
+              </div>
+              <div style={{ fontSize: 12.5 }}>{a.text}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ============================== AI ASSISTANT ============================== */
+function AiAssistant({ open, onToggle }) {
+  const [messages, setMessages] = useState([
+    { role: "ai", text: "I'm your DeepShield copilot. Ask me to explain an alert, summarize an incident, or recommend mitigations." },
+  ]);
+  const [input, setInput] = useState("");
+  const [typing, setTyping] = useState(false);
+  const [listening, setListening] = useState(false);
+  const scrollRef = useRef(null);
+
+  useEffect(() => { scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" }); }, [messages, typing]);
+
+  const send = () => {
+    if (!input.trim()) return;
+    const userMsg = input.trim();
+    setMessages((m) => [...m, { role: "user", text: userMsg }]);
+    setInput("");
+    setTyping(true);
+    setTimeout(() => {
+      setTyping(false);
+      const replies = [
+        `Based on current telemetry, ${pick(USERS).name}'s session shows the highest deviation from baseline this hour. I'd recommend reviewing their last privilege change first.`,
+        "Here's a quick summary: 2 critical and 2 high-severity incidents are open. The prod-db-04 escalation is the most time-sensitive — recommend containment within the next 15 minutes.",
+        "I can draft an executive summary from the last 24 hours of activity — head to Reports and generate the Executive summary export.",
+        "Insider-threat probability for the Core Banking department has risen 12% this week, largely driven by two accounts with MFA disabled.",
+      ];
+      setMessages((m) => [...m, { role: "ai", text: pick(replies) }]);
+    }, 1100);
+  };
+
+  const toggleMic = () => {
+    setListening(true);
+    setTimeout(() => setListening(false), 2200);
+  };
+
+  return (
+    <>
+      <button
+        onClick={onToggle}
+        aria-label="Open AI assistant"
+        style={{ position: "fixed", bottom: 24, right: 24, width: 54, height: 54, borderRadius: "50%", background: `linear-gradient(135deg, ${T.primary}, ${T.purple})`, border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: `0 0 22px rgba(0,229,255,0.45)`, zIndex: 55 }}
+      >
+        <Bot size={24} color="#04121a" />
+      </button>
+
+      {open && (
+        <div className="sx-glass sx-fade-in" style={{ position: "fixed", bottom: 90, right: 24, width: 340, maxWidth: "90vw", height: 440, borderRadius: 16, display: "flex", flexDirection: "column", zIndex: 55, overflow: "hidden" }}>
+          <div style={{ padding: "12px 14px", borderBottom: `1px solid ${T.border}`, display: "flex", alignItems: "center", gap: 8 }}>
+            <Sparkles size={15} color={T.purple} />
+            <span style={{ fontWeight: 600, fontSize: 13 }}>AI copilot</span>
+            <div style={{ flex: 1 }} />
+            <button className="sx-btn" onClick={onToggle} style={{ width: 24, height: 24, borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center" }}><X size={12} /></button>
+          </div>
+          <div ref={scrollRef} className="sx-scrollY" style={{ flex: 1, padding: 12, display: "flex", flexDirection: "column", gap: 10 }}>
+            {messages.map((m, i) => (
+              <div key={i} style={{ alignSelf: m.role === "user" ? "flex-end" : "flex-start", maxWidth: "85%", padding: "8px 11px", borderRadius: 12, fontSize: 12.5, lineHeight: 1.5, background: m.role === "user" ? `linear-gradient(135deg, ${T.primary}30, ${T.purple}30)` : "rgba(255,255,255,0.04)", border: `1px solid ${T.border}` }}>
+                {m.text}
+              </div>
+            ))}
+            {typing && (
+              <div style={{ display: "flex", gap: 4, padding: "8px 11px" }}>
+                {[0, 1, 2].map((i) => <span key={i} style={{ width: 6, height: 6, borderRadius: "50%", background: T.textMuted, animation: `sx-typing 1s ease-in-out infinite`, animationDelay: `${i * 0.15}s` }} />)}
+              </div>
+            )}
+          </div>
+          <div style={{ padding: 10, borderTop: `1px solid ${T.border}`, display: "flex", gap: 6 }}>
+            <button className="sx-btn" onClick={toggleMic} style={{ width: 34, height: 34, borderRadius: 9, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, color: listening ? T.red : T.textSecondary, position: "relative" }}>
+              <Mic size={14} />
+              {listening && <span style={{ position: "absolute", inset: 0, borderRadius: 9, border: `1.5px solid ${T.red}`, animation: "sx-pulse-ring 1.1s ease-out infinite" }} />}
+            </button>
+            <input value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && send()} placeholder="Ask about an alert…" className="sx-input" style={{ flex: 1, borderRadius: 9, padding: "0 10px", fontSize: 12.5 }} />
+            <button className="sx-btn" onClick={send} style={{ width: 34, height: 34, borderRadius: 9, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, color: T.primary }}><Send size={14} /></button>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+/* ============================== TOASTS ============================== */
+function Toasts({ toasts }) {
+  return (
+    <div style={{ position: "fixed", top: 74, right: 20, zIndex: 90, display: "flex", flexDirection: "column", gap: 8, width: 300, maxWidth: "88vw" }}>
+      {toasts.map((t) => (
+        <div key={t.id} className="sx-glass sx-fade-in" style={{ padding: 12, borderLeft: `3px solid ${SEV_COLOR[t.severity] || T.primary}`, borderRadius: 10 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
+            <AlertOctagon size={13} color={SEV_COLOR[t.severity] || T.primary} />
+            <span style={{ fontSize: 11.5, fontWeight: 600, color: SEV_COLOR[t.severity] || T.primary }}>New {t.severity?.toLowerCase()} alert</span>
+          </div>
+          <div style={{ fontSize: 12, color: T.textSecondary }}>{t.text}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ============================== ROOT APP ============================== */
+export default function DeepShieldDashboard() {
+  const [active, setActive] = useState("dashboard");
+  const [collapsed, setCollapsed] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [aiOpen, setAiOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState(null);
+
+  const [metrics, setMetrics] = useState({
+    threatScore: 62, threatDelta: -2.1,
+    critical: 2, criticalDelta: 4.0,
+    highRisk: 3, highRiskDelta: 1.2,
+    confidence: 94.2,
+    assets: 1284,
+    sessions: 4812, sessionDelta: 0.8,
+    attacksToday: 37,
+    arcs: [],
+  });
+  const [trend, setTrend] = useState(() => makeTrend(58));
+  const [drift, setDrift] = useState(() => makeTrend(40, 24, 3));
+  const [activity, setActivity] = useState(() => Array.from({ length: 10 }, makeActivity));
+  const [alerts, setAlerts] = useState([
+    { id: "a1", severity: "Critical", text: "Privilege escalation on prod-db-04 outside change window", time: "6m", read: false },
+    { id: "a2", severity: "High", text: "Impossible travel detected for a treasury operator", time: "22m", read: false },
+    { id: "a3", severity: "Medium", text: "USB device connected on a regulated workstation", time: "1h", read: true },
+  ]);
+  const [toasts, setToasts] = useState([]);
+
+  // seed map arcs
+  useEffect(() => {
+    const seed = Array.from({ length: 5 }, (_, i) => {
+      const from = pick(CITIES), to = pick(CITIES.filter((c) => c !== from));
+      return { id: `arc-${i}`, from, to, sev: pick(["critical", "high", "monitored"]), dur: rand(3, 6) };
+    });
+    setMetrics((m) => ({ ...m, arcs: seed }));
+  }, []);
+
+  // realtime ticking
+  useTicker(2600, () => {
+    setActivity((a) => [makeActivity(), ...a].slice(0, 24));
+  });
+
+  useTicker(4000, () => {
+    setMetrics((m) => ({
+      ...m,
+      threatScore: clamp(m.threatScore + rand(-2, 2), 20, 92),
+      confidence: clamp(m.confidence + rand(-0.3, 0.3), 85, 99.5),
+      sessions: clamp(Math.round(m.sessions + rand(-15, 20)), 4000, 6000),
+      attacksToday: m.attacksToday + (Math.random() > 0.7 ? 1 : 0),
+    }));
+    setTrend((t) => [...t.slice(1), { t: `${(parseInt(t[t.length - 1].t) + 1) % 24}:00`, v: clamp(t[t.length - 1].v + rand(-5, 5), 10, 95) }]);
+    setDrift((d) => [...d.slice(1), { t: `${(parseInt(d[d.length - 1].t) + 1) % 24}:00`, v: clamp(d[d.length - 1].v + rand(-4, 4), 10, 90) }]);
+  });
+
+  useTicker(9000, () => {
+    setMetrics((m) => ({
+      ...m,
+      arcs: m.arcs.map((a, i) => (Math.random() > 0.6 ? { ...a, id: `arc-${i}-${Date.now()}`, from: pick(CITIES), to: pick(CITIES) } : a)),
+    }));
+  });
+
+  // occasional new alert -> toast
+  useTicker(16000, () => {
+    if (Math.random() > 0.45) return;
+    const texts = [
+      "Bulk export detected on a regulated workstation",
+      "New device fingerprint failed trust verification",
+      "Anomalous API burst from an internal service account",
+      "MFA bypass attempt blocked on treasury console",
+    ];
+    const sev = pick(["Critical", "High", "Medium"]);
+    const text = pick(texts);
+    const id = Math.random().toString(36).slice(2);
+    setAlerts((a) => [{ id, severity: sev, text, time: "now", read: false }, ...a]);
+    setToasts((t) => [...t, { id, severity: sev, text }]);
+    setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 5000);
+  });
+
+  // keyboard shortcuts
+  useEffect(() => {
+    const onKey = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") { e.preventDefault(); setPaletteOpen((o) => !o); }
+      if (e.key === "Escape") { setPaletteOpen(false); setNotifOpen(false); setSelectedUser(null); }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  const unread = alerts.filter((a) => !a.read).length;
+  const threatLevel = metrics.threatScore > 70 ? "Severe" : metrics.threatScore > 45 ? "Elevated" : "Guarded";
+
+  const view = {
+    dashboard: <DashboardView metrics={metrics} trend={trend} activity={activity} />,
+    threat: <DashboardView metrics={metrics} trend={trend} activity={activity} />,
+    "ai-risk": <AiRiskView metrics={metrics} drift={drift} />,
+    users: <UsersView onSelect={setSelectedUser} />,
+    behavior: <BehaviorView />,
+    sessions: <SessionsView activity={activity} />,
+    incidents: <IncidentsView />,
+    intel: <IntelView />,
+    quantum: <QuantumView />,
+    reports: <ReportsView />,
+    settings: <SettingsView />,
+  }[active];
+
+  return (
+    <div className="sx-root" style={{ position: "relative", width: "100%", minHeight: "100vh", background: T.bg, overflow: "hidden" }}>
+      <GlobalStyle />
+      <CyberBackground />
+      <div style={{ position: "relative", zIndex: 1, display: "flex", width: "100%", minHeight: "100vh" }}>
+        <Sidebar collapsed={collapsed} active={active} onNavigate={setActive} />
+        <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
+          <Topbar
+            onToggleSidebar={() => setCollapsed((c) => !c)}
+            onOpenPalette={() => setPaletteOpen(true)}
+            onOpenNotifications={() => setNotifOpen(true)}
+            unread={unread}
+            threatLevel={threatLevel}
+          />
+          <div className="sx-scrollY" style={{ flex: 1, padding: 22 }}>
+            {view}
+          </div>
+        </div>
+      </div>
+
+      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} onNavigate={setActive} />
+      <NotificationDrawer open={notifOpen} onClose={() => setNotifOpen(false)} alerts={alerts} onRead={(id) => setAlerts((a) => a.map((x) => x.id === id ? { ...x, read: true } : x))} />
+      <UserProfileDrawer user={selectedUser} onClose={() => setSelectedUser(null)} />
+      <AiAssistant open={aiOpen} onToggle={() => setAiOpen((o) => !o)} />
+      <Toasts toasts={toasts} />
+    </div>
+  );
+}
